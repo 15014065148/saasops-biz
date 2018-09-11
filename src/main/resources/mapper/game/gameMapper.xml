@@ -1,0 +1,361 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+
+<mapper namespace="com.eveb.saasops.modules.game.mapper.GameMapper">
+    <select id="listTGmDepot" resultType="com.eveb.saasops.modules.game.entity.TGmDepot">
+        select a.id,a.depotName, a.available, a.createUser, a.createTime, a.modifyUser,a.depotCode,
+        a.modifyTime,IFNULL(tb1.apiCount,0) as apiCount,
+        a.sortId,a.startDate,a.endDate,a.memo,tb1.apiName from t_gm_depot a left join
+        (select depotId,count(1) as apiCount,apiName from t_gm_api group by depotId) tb1 on a.id=tb1.depotId
+        <include refid="queryTGmDepot"/>
+        ORDER BY a.createTime DESC
+    </select>
+
+    <select id="findGameType" resultType="com.eveb.saasops.modules.game.entity.TGmCat">
+        SELECT id,catName FROM `t_gm_cat` where parentId = 0
+    </select>
+
+    <select id="findSubCat" resultType="com.eveb.saasops.modules.game.entity.TGmCat">
+        SELECT id,catName FROM `t_gm_cat` where parentId != 0
+    </select>
+
+    <select id="listTGmApi" resultType="com.eveb.saasops.modules.game.entity.TGmApi">
+        select t1.*,
+        t2.depotName,
+        IFNULL(t3.siteNumber,0) siteNumber,
+        GROUP_CONCAT(cat.catName) catName
+        from t_gm_api t1 LEFT JOIN
+        t_gm_depot t2 ON t1.depotId = t2.id left join
+        (SELECT count(1) siteNumber,apiId FROM `t_gm_apiprefix` GROUP BY apiId) t3 on t1.id=t3.apiId
+        left join t_gm_depotcat depot on t2.id = depot.depotId
+        left join t_gm_cat cat on depot.catId = cat.id
+        where cat.parentId=0
+        <include refid="queryTGmApi"/>
+        group by t1.apiName
+    </select>
+
+    <select id="getApiBySiteCode" parameterType="java.lang.String"
+            resultType="com.eveb.saasops.modules.game.entity.TGmApi">
+        select api.*, fix.id prefixId from t_cp_site site,
+                          t_gm_apiprefix fix,
+                          t_gm_api api
+                    where site.id = fix.siteId
+                      and fix.apiId = api.id
+                      and site.siteCode = #{siteCode} group by api.apiName
+    </select>
+
+    <select id="listTGmCaseDel" resultType="com.eveb.saasops.modules.game.entity.TGmCaseDel">
+        SELECT COUNT(*) apiNum,t1.* FROM t_gm_case_del t1 LEFT JOIN t_gm_caseapi_del t2 ON t1.id = t2.caseId LEFT JOIN
+        t_gm_api t3 ON t2.apiId = t3.id
+        <include refid="queryTGmCaseDel"/>
+        GROUP BY t1.caseName
+    </select>
+
+    <select id="listTGmCat" resultType="com.eveb.saasops.modules.game.entity.TGmCat">
+        select t.*,(select catName from t_gm_cat t1 where t1.id = t.parentId) parentName from t_gm_cat t
+        <include refid="queryTGmCat"/>
+        order by t.createTime desc
+    </select>
+
+    <select id="listTGmGame" resultType="com.eveb.saasops.modules.game.entity.TGmGame">
+        select t2.id catId,t2.catName catName,count(t1.id) gameCount,SUM(t1.monthPer) tMonthPer,SUM(t1.lastdayPer)
+        tLastDayPer from
+        t_gm_game t1,t_gm_cat t2,t_gm_depot t3
+        <include refid="queryTGmGame"/>
+        GROUP BY t1.catId
+    </select>
+
+    <select id="findTGmGameNums" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+        SELECT COUNT(*) openNums from (select * from t_gm_game
+        <include refid="queryTGmGameNums"/>
+        GROUP BY gameName) tb1
+    </select>
+
+    <select id="findTGmGameOpenNums" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+        SELECT COUNT(*) openNums from (select * from t_gm_game
+        <include refid="queryTGmGameOpenNums"/>
+        GROUP BY gameName) tb1
+    </select>
+
+    <select id="findGameList" resultType="com.eveb.saasops.modules.game.entity.TGmGame">
+        select t1.*, t2.catName catName,t3.labelId from t_gm_game t1 LEFT JOIN t_gm_cat t2 ON t1.catId = t2.id LEFT JOIN
+        t_label_game_depot t3 ON t1.id = t3.gameId
+        <include refid="querysGame"/>
+        GROUP BY gameName
+        ORDER BY t1.createTime DESC
+    </select>
+
+    <select id="listtGameLogo" resultType="com.eveb.saasops.modules.game.entity.TGameLogo">
+        select t1.*,t2.depotName from t_game_logo t1,t_gm_depot t2
+        <include refid="querysTGmGame"/>
+        ORDER BY id DESC
+    </select>
+
+    <select id="findGameDepot" resultType="com.eveb.saasops.modules.game.entity.TGmDepot">
+        select id,depotName from t_gm_depot where available = 1
+    </select>
+
+    <select id="listInfo" resultType="com.eveb.saasops.modules.game.entity.TGameLogo">
+        SELECT * FROM `t_game_logo`  t1 LEFT JOIN t_label_game_depot t2 on t1.id = t2.depotLogoId LEFT JOIN t_gm_label t3 on t2.labelId = t3.id;
+    </select>
+
+    <select id="findTLabelGameDepotId" resultType="com.eveb.saasops.modules.game.entity.TLabelGameDepot">
+        SELECT * FROM `t_label_game_depot`
+        <where>
+            <if test="depotLogoId!=null">
+                AND depotLogoId = #{depotLogoId}
+            </if>
+        </where>
+    </select>
+
+    <select id="findTLabelGameDepotGameId" resultType="com.eveb.saasops.modules.game.entity.TLabelGameDepot">
+        SELECT * FROM `t_label_game_depot`
+        <where>
+            <if test="gameId!=null">
+                AND gameId = #{gameId}
+            </if>
+        </where>
+    </select>
+
+    <insert id="saveAnnouncement" parameterType="com.eveb.saasops.modules.game.entity.TGmAnnouncement">
+        INSERT INTO t_gm_announcement
+        (`maintainStartTime`,`maintainEndTime`,`announcementStartTime`,`announcementEndTime`,`announcementName`,
+        `announcementMemo`,`available`,`modifyTime`,`signed`,`depotId`) VALUES (#{maintainStartTime}, #{maintainEndTime},
+        #{announcementStartTime}, #{announcementEndTime},
+        #{announcementName},#{announcementMemo},#{available},#{modifyTime},#{signed},#{depotId})
+        on duplicate key update
+        maintainStartTime = VALUES(maintainStartTime),
+        maintainEndTime = VALUES(maintainEndTime),
+        announcementStartTime = VALUES(announcementStartTime),
+        announcementEndTime = VALUES(announcementEndTime),
+        announcementName = VALUES(announcementName),
+        announcementMemo = VALUES(announcementMemo),
+        available = VALUES(available),
+        modifyTime = VALUES(modifyTime),
+        signed = VALUES(signed),
+        depotId = VALUES(depotId)
+    </insert>
+
+
+    <select id="selectAnnouncementList" resultType="com.eveb.saasops.modules.game.entity.TGmAnnouncement">
+        SELECT t1.*,t2.depotName FROM t_gm_announcement t1 LEFT JOIN t_gm_depot t2 ON t1.depotId = t2.id
+        <where>
+            <if test="depotId!=null and depotId !=''">
+                AND t1.depotId = #{depotId}
+            </if>
+            <if test="signed!=null and signed.trim() != ''">
+                AND t1.signed like concat('%',#{signed},'%')
+            </if>
+            <if test="maintainStartTime!=null and maintainStartTime !=''">
+                AND t1.maintainStartTime = #{maintainStartTime}
+            </if>
+            <if test="maintainEndTime!=null and maintainEndTime !=''">
+                AND t1.maintainEndTime = #{maintainEndTime}
+            </if>
+        </where>
+    </select>
+
+    <sql id="queryTGmCat">
+        <where>
+            <if test="catName!=null and catName.trim() != ''">
+                AND t.catName like concat('%',#{catName},'%')
+            </if>
+            <if test="createUser!=null and createUser.trim() != ''">
+                AND t.createUser like concat('%',#{createUser},'%')
+            </if>
+            <if test="available!=null">
+                AND t.available = #{available}
+            </if>
+            <if test="enablePc!=null">
+                AND t.enablePc = #{enablePc}
+            </if>
+            <if test="enableMb!=null">
+                AND t.enableMb = #{enableMb}
+            </if>
+            <if test="enableApp!=null">
+                AND t.enableApp = #{enableApp}
+            </if>
+        </where>
+    </sql>
+
+    <sql id="queryTGmGameNums">
+        <where>
+            <if test="depotId!=null and depotId !=''">
+                AND depotId = #{depotId}
+            </if>
+        </where>
+    </sql>
+
+    <sql id="queryTGmGameOpenNums">
+        <where>
+            available = 1
+            <if test="depotId!=null and depotId !=''">
+                AND depotId = #{depotId}
+            </if>
+        </where>
+    </sql>
+
+    <sql id="queryTGmGame">
+        <where>
+            t1.catId = t2.id and t1.depotId = t3.id
+            <if test="depotName!=null and depotName.trim() != ''">
+                AND t3.depotName like concat('%',#{depotName},'%')
+            </if>
+            <if test="available!=null">
+                AND t1.available = #{available}
+            </if>
+        </where>
+    </sql>
+
+    <sql id="querysGame">
+        <where>
+            <if test="id!=null and id !=''">
+                AND t1.id = #{id}
+            </if>
+            <if test="depotId!=null and depotId !=''">
+                AND t1.depotId = #{depotId}
+            </if>
+            <if test="labelStr !=null and labelStr != '' ">
+                and t3.labelId IN ( ${labelStr} )
+            </if>
+            <if test="gameName!=null and gameName.trim() != ''">
+                AND t1.gameName like concat('%',#{gameName},'%')
+            </if>
+            <if test="gameNameEn!=null and gameNameEn.trim() != ''">
+                AND t1.gameNameEn like concat('%',#{gameNameEn},'%')
+            </if>
+        </where>
+    </sql>
+
+    <sql id="querysTGmGame">
+        <where>
+            t1.depotId = t2.id
+            <if test="catId!=null and catId !=''">
+                AND t1.catId = #{catId}
+            </if>
+            <if test="depotId!=null and depotId !=''">
+                AND t1.depotId = #{depotId}
+            </if>
+            <if test="titleTag!=null and titleTag.trim() != ''">
+                AND t1.titleTag like concat('%',#{titleTag},'%')
+            </if>
+        </where>
+    </sql>
+
+    <sql id="queryTGmCaseDel">
+        <where>
+            <if test="depotId!=null and depotId !=''">
+                AND t3.depotId = #{depotId}
+            </if>
+            <if test="caseName!=null and caseName.trim() != ''">
+                AND t1.caseName like concat('%',#{caseName},'%')
+            </if>
+            <if test="createUser!=null and createUser.trim() != ''">
+                AND t1.createUser like concat('%',#{createUser},'%')
+            </if>
+            <if test="available!=null">
+                AND t1.available = #{available}
+            </if>
+        </where>
+    </sql>
+
+    <sql id="queryTGmApi">
+        <if test="depotId!=null and depotId !=''">
+            AND t1.depotId = #{depotId}
+        </if>
+        <if test="catId!=null and catId!=''">
+            AND cat.id = #{catId}
+        </if>
+        <if test="circuitCode!=null and circuitCode.trim() != ''">
+            AND t1.circuitCode like concat('%',#{circuitCode},'%')
+        </if>
+        <if test="apiName!=null and apiName.trim() != ''">
+            AND t1.apiName like concat('%',#{apiName},'%')
+        </if>
+        <if test="available!=null">
+            AND t1.available = #{available}
+        </if>
+    </sql>
+
+    <sql id="queryTGmDepot">
+        <where>
+            <if test="id!=null and id !=''">
+                AND a.id = #{id}
+            </if>
+            <if test="apiName!=null and apiName.trim() != ''">
+                AND tb1.apiName like concat('%',#{apiName},'%')
+            </if>
+            <if test="createUser!=null and createUser.trim() != ''">
+                AND a.createUser like concat('%',#{createUser},'%')
+            </if>
+            <if test="available!=null">
+                AND a.available = #{available}
+            </if>
+        </where>
+    </sql>
+
+    <delete id="deleteLogoByGameId" parameterType="java.lang.Integer">
+        delete from t_game_logo where gameId = #{id}
+    </delete>
+
+    <select id="queryGameListPage" resultType="com.eveb.saasops.modules.game.entity.TGmGame"
+            parameterType="com.eveb.saasops.modules.game.entity.TGmGame">
+        SELECT
+            game.depotId,
+            game.catId,
+            game.gameName,
+            game.gameTag,
+            game.depotName,
+            game.gameNameEn,
+            game.STATUS,
+            game.modifyTime,
+            game.id,
+            cat.catName
+        FROM t_gm_game game
+            left join t_gm_api api on api.depotId = game.depotId
+            left join t_gm_cat cat on game.catId = cat.id
+            where api.apiName = #{apiName} group by game.gameName
+        <where>
+            <if test="gameName!=null and gameName.trim() != ''">
+                AND game.gameName like concat('%',#{gameName},'%')
+            </if>
+            <if test="gameTag!=null and gameTag.trim() != ''">
+                AND game.gameTag like concat('%',#{gameTag},'%')
+            </if>
+        </where>
+    </select>
+
+    <update id="openOrCloseGame">
+        update t_gm_game set status=#{status} where id=#{id}
+    </update>
+
+    <select id="queryApiListPage" resultType="com.eveb.saasops.modules.game.entity.TGmApi">
+        select api.id apiId,
+        api.apiName,
+        depot.depotName,
+        cat.catName,
+        fix.available,
+        site.siteCode,
+        site.id siteId,
+        depot.id depotId,
+        api.circuitCode,
+        api.modifyTime
+        from t_gm_api api left join t_gm_apiprefix fix on api.id = fix.apiId
+        left join t_cp_site site on fix.siteId = site.id
+        left join t_gm_depot depot on api.depotId = depot.id
+        left join t_gm_depotcat dc on depot.id = dc.depotId
+        left join t_gm_cat cat on dc.catId = cat.id
+        where api.id not in (select ap.id apiId
+        from t_gm_apiprefix fix left join t_gm_api ap on fix.apiId = ap.id
+        left join t_cp_site site on fix.siteId = site.id
+        where site.siteCode = #{siteCode} GROUP BY ap.apiName
+        )
+        <if test="apiName!=null and apiName.trim() != ''">
+            AND api.apiName like concat('%',#{apiName},'%')
+        </if>
+        <if test="available!=null">
+            AND fix.available = #{available}
+        </if>
+        group by api.apiName
+    </select>
+</mapper>

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+
+<mapper namespace="com.eveb.saasops.modules.game.mapper.GamePrefixMapper">
+
+    <select id="queryListPage" resultType="com.eveb.saasops.modules.game.entity.TGmApiprefix">
+        select site.siteCode,
+        site.siteName,
+        cpy.companySname companyName,
+        (select count(1) from t_gm_api api where api.id=fix.apiId) apiCount,
+        fix.createUser,
+        fix.modifyTime
+        from t_cp_site site
+        left join t_gm_apiprefix fix on site.id = fix.siteId
+        left join t_cp_company cpy on site.companyId = cpy.id
+        <include refid="queryWhere"/>
+    </select>
+
+    <sql id="queryWhere">
+        <where>
+            <if test="siteCode!=null and siteCode.trim() != ''">
+                AND site.siteCode like concat('%',#{siteCode},'%')
+            </if>
+            <if test="siteName!=null and siteName.trim() != ''">
+                AND site.siteName like concat('%',#{siteName},'%')
+            </if>
+            <if test="companyName!=null and companyName.trim() != ''">
+                AND cpy.companySname like concat('%',#{companyName},'%')
+            </if>
+            <if test="available!=null">
+                AND fix.available = #{available}
+            </if>
+        </where>
+    </sql>
+
+    <select id="querySiteInfo" resultType="com.eveb.saasops.modules.game.entity.TGmApiprefix">
+        select site.id siteId,
+               site.siteCode,
+               site.siteName,
+               site.schemaName,
+               cp.companyFname companyName
+          from t_cp_site site left join t_cp_company cp
+            on site.companyId = cp.id
+         where site.id = #{siteId}
+    </select>
+
+    <select id="getApiBySiteCode" resultType="com.eveb.saasops.modules.game.entity.TGmApiprefix">
+        select api.id apiId,
+               api.apiName,
+               fix.id,
+               depot.depotName,
+               cat.catName,
+               fix.available,
+               site.siteCode,
+               site.id siteId
+        from t_gm_apiprefix fix left join t_gm_api api on fix.apiId = api.id
+                            left join t_cp_site site on fix.siteId = site.id
+                            left join t_gm_depot depot on api.depotId = depot.id
+                            left join t_gm_depotcat dc on depot.id = dc.depotId
+                            left join t_gm_cat cat on dc.catId = cat.id
+          where site.siteCode = #{siteCode}
+          group by api.apiName
+    </select>
+
+    <delete id="deleteInfoById" parameterType="java.util.List">
+        delete from t_gm_apiprefix where id in
+        <foreach item="item" collection="list" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </delete>
+
+    <delete id="closeApi">
+        update t_gm_apiprefix set available=#{available} where id=#{id}
+    </delete>
+
+</mapper>

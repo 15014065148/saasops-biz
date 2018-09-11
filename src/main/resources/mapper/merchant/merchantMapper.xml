@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+
+<mapper namespace="com.eveb.saasops.modules.merchant.mapper.MerchantMapper">
+    <select id="listTCpCompany" resultType="com.eveb.saasops.modules.merchant.entity.TCpCompany">
+        select * from t_cp_company t1 LEFT JOIN
+        (select t2.companyId,COUNT(*) siteNum from t_cp_site t2 where t2.companyId is not null GROUP BY t2.companyId) t3
+        on t1.id= t3.companyId
+        <include refid="queryTCpCompany"/>
+        ORDER BY createTime DESC
+    </select>
+
+    <update id="updateAvailable" parameterType="com.eveb.saasops.modules.merchant.entity.TCpCompany">
+        update t_cp_company set `available` = #{available} where id in
+        <foreach item="id" collection="ids" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
+
+    <select id="listTCpSite" resultType="com.eveb.saasops.modules.merchant.entity.TCpSite">
+        select site.id,
+        site.siteCode,
+        site.siteName,
+        cp.companyFname,
+        site.schemaName,
+        site.startDate,
+        site.available,
+        site.useTime,
+        site.createUser,
+        (select count(1) from t_gm_apiprefix fix, t_gm_api api where fix.siteId = site.id and fix.apiId = api.id)
+        apiCount,
+        (select count(1) from t_cp_siteurl su where su.siteId = site.id) domainCount
+        from t_cp_site site LEFT JOIN t_cp_company cp on site.companyId = cp.id
+        <include refid="queryTCpSite"/>
+        ORDER BY site.createTime DESC
+    </select>
+
+    <select id="listTRestriction" resultType="com.eveb.saasops.modules.merchant.entity.TRestriction">
+        SELECT t1.*,t2.siteName siteName FROM t_restriction t1 LEFT JOIN t_cp_site t2 on t1.siteId = t2.id
+        <include refid="queryTRestriction"/>
+        ORDER BY createTime DESC
+    </select>
+
+    <select id="domainList" resultType="com.eveb.saasops.modules.merchant.entity.TCpSite">
+        select site.siteCode,
+               site.siteName,
+               su.clientType,
+               su.siteUrl,
+               su.available
+          from t_cp_siteurl su,
+               t_cp_site site
+         where su.siteId = site.id
+           and site.siteCode = #{siteCode}
+    </select>
+
+    <select id="paymentList" resultType="com.eveb.saasops.modules.merchant.entity.TCpSite">
+        select op.id relateId,
+               pay.payment,
+               pay.id paymentId,
+               pay.payCode,
+               pay.payClass,
+               pay.tPayUrl payUrl,
+               op.available
+          from t_op_pay pay,
+               t_op_payWebSiteRelation op,
+               t_cp_site site
+         where pay.id = op.paymentId
+           and op.cpSiteId = site.id
+           and site.siteCode = #{siteCode}
+
+    </select>
+
+    <select id="reversePaymentList" resultType="com.eveb.saasops.modules.merchant.entity.TCpSite">
+        select op.id relateId,
+        pay.payment,
+        pay.id paymentId,
+        pay.payCode,
+        pay.payClass,
+        pay.tPayUrl payUrl,
+        op.available
+        from t_op_pay pay,
+        t_op_payWebSiteRelation op,
+        t_cp_site site
+        where pay.id = op.paymentId
+        and op.cpSiteId = site.id
+        and site.siteCode != #{siteCode}
+        <if test="payCode!=null and payCode !=''">
+            AND pay.payCode like concat('%',#{payCode},'%')
+        </if>
+        <if test="payClass!=null and payClass !=''">
+            AND pay.payClass like concat('%',#{payClass},'%')
+        </if>
+    </select>
+
+    <sql id="queryTRestriction">
+        <where>
+            <if test="siteId!=null and siteId !=''">
+                AND t1.siteId = #{siteId}
+            </if>
+            <if test="limitArea!=null and limitArea !=''">
+                AND t1.limitArea = #{limitArea}
+            </if>
+            <if test="available!=null">
+                AND t1.available = #{available}
+            </if>
+            <if test="startDate!=null and startDate !=''">
+                AND t1.startDate = #{startDate}
+            </if>
+            <if test="endDate!=null and endDate !=''">
+                AND t1.endDate = #{endDate}
+            </if>
+        </where>
+    </sql>
+
+    <sql id="queryTCpCompany">
+        <where>
+            <if test="companySname!=null and companySname.trim() != ''">
+                AND companySname like concat('%',#{companySname},'%')
+            </if>
+            <if test="companyFname!=null and companyFname.trim() != ''">
+                AND companyFname like concat('%',#{companyFname},'%')
+            </if>
+            <if test="contact!=null and contact !=''">
+                AND contact = #{contact}
+            </if>
+            <if test="available!=null">
+                AND available = #{available}
+            </if>
+            <if test="startDate!=null and startDate !=''">
+                AND startDate = #{startDate}
+            </if>
+            <if test="endDate!=null and endDate !=''">
+                AND endDate = #{endDate}
+            </if>
+        </where>
+    </sql>
+
+    <sql id="queryTCpSite">
+        <where>
+            <if test="siteCode!=null and siteCode.trim() != ''">
+                AND site.siteCode like concat('%',#{siteCode},'%')
+            </if>
+            <if test="siteName!=null and siteName.trim() != ''">
+                AND site.siteName like concat('%',#{siteName},'%')
+            </if>
+            <if test="companyFname!=null and companyFname.trim() != ''">
+                AND cp.companyFname like concat('%',#{companyFname},'%')
+            </if>
+            <if test="available!=null">
+                AND site.available = #{available}
+            </if>
+        </where>
+    </sql>
+</mapper>

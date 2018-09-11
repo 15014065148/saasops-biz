@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.eveb.saasops.modules.sys.mapper.SysMapper">
+    <select id="listSysUserEntity" resultType="com.eveb.saasops.modules.sys.entity.SysUserEntity">
+        SELECT t1.*, t2.role_id roleId,t3.role_name roleName FROM sys_user t1 LEFT JOIN sys_user_role t2 ON t1.user_id =
+        t2.user_id LEFT JOIN sys_role t3 on t2.role_id = t3.role_id
+        <where>
+            <if test="username!=null and username !=''">
+                AND t1.username = #{username}
+            </if>
+            <if test="roleId!=null and roleId !=''">
+                AND t2.role_id = #{roleId}
+            </if>
+            <if test="status!=null">
+                AND t1.status = #{status}
+            </if>
+        </where>
+    </select>
+
+    <select id="listSysRoleEntity" resultType="com.eveb.saasops.modules.sys.entity.SysRoleEntity">
+        SELECT t1.*,t2.role_id roleId FROM sys_user t1 LEFT JOIN sys_user_role t2 on t1.user_id = t2.user_id
+        <where>
+            <if test="username!=null and username !=''">
+                AND t1.username = #{username}
+            </if>
+            <if test="roleId!=null and roleId !=''">
+                AND t2.role_id = #{roleId}
+            </if>
+            <if test="status!=null and status !=''">
+                AND t1.status = #{status}
+            </if>
+        </where>
+    </select>
+</mapper>

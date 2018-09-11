@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+
+<mapper namespace="com.eveb.saasops.modules.operate.mapper.PayPlatformMapper">
+
+    <select id="queryPayListPage" resultType="com.eveb.saasops.modules.operate.entity.TOpPay">
+        select pay.id,
+        pay.payCode,
+        pay.payClass,
+        pay.payment,
+        pay.tPayUrl payUrl,
+        (select count(1) from t_cp_site site where site.id = web.cpSiteId) siteCount,
+        pay.isEnable,
+        pay.modifyTime
+        from t_op_pay pay left join
+        t_op_payWebSiteRelation web on pay.id = web.paymentId
+        <include refid="queryWhere"/>
+        group by pay.id
+    </select>
+
+    <select id="queryPayInfo" resultType="com.eveb.saasops.modules.operate.entity.TOpPay">
+        select payment,
+               payClass,
+               payWay,
+               payType,
+               isEnable,
+               createUser,
+               createTime,
+               modifyUser,
+               modifyTime,
+               mBankLog,
+               tPayUrl payUrl,
+               callbackUrl,
+               urlMethod,
+               payCode
+          from t_op_pay where id = #{payId}
+    </select>
+
+    <select id="queryBankList" resultType="com.eveb.saasops.modules.operate.entity.TBsBank">
+        select re.id,
+               bank.bankName,
+               bank.bankCode,
+               re.available
+          from t_bs_bank bank, t_op_payBankRelation re, t_op_pay pay
+         where bank.id = re.bankId
+           and pay.id = re.paymentId
+           and pay.id = #{payId}
+    </select>
+
+    <sql id="queryWhere">
+        <where>
+            <if test="payCode!=null and payCode.trim() != ''">
+                AND pay.payCode like concat('%',#{payCode},'%')
+            </if>
+            <if test="payClass!=null and payClass.trim() != ''">
+                AND pay.payClass like concat('%',#{payClass},'%')
+            </if>
+            <if test="isEnable!=null">
+                AND pay.isEnable = #{isEnable}
+            </if>
+        </where>
+    </sql>
+
+    <update id="closeOrOpen">
+        update t_op_payWebSiteRelation set available=#{available} where id=#{relateId}
+    </update>
+
+    <delete id="deleteByIds" parameterType="java.util.List">
+        delete from t_op_payWebSiteRelation where id in
+        <foreach item="item" collection="list" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </delete>
+
+    <insert id="add">
+        insert into t_op_pay(payment,
+                             payClass,
+                             payWay,
+                             payType,
+                             isEnable,
+                             createUser,
+                             createTime,
+                             modifyUser,
+                             modifyTime,
+                             mBankLog,
+                             tPayUrl,
+                             callbackUrl,
+                             urlMethod,
+                             payCode
+                        ) values (
+                             #{payment},
+                             #{payClass},
+                             #{payWay},
+                             #{payType},
+                             #{isEnable},
+                             #{createUser},
+                             #{createTime},
+                             #{modifyUser},
+                             #{modifyTime},
+                             #{mBankLog},
+                             #{payUrl},
+                             #{callbackUrl},
+                             #{urlMethod},
+                             #{payCode}
+        )
+    </insert>
+
+</mapper>

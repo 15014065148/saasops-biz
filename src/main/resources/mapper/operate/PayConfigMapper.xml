@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+
+<mapper namespace="com.eveb.saasops.modules.operate.mapper.PayConfigMapper">
+
+    <select id="queryPayListPage" resultType="com.eveb.saasops.modules.operate.entity.TOpPayConfig">
+        select site.siteCode,
+        site.siteName,
+        cpy.companyFname companyName,
+        site.schemaName,
+        (select count(1) from t_op_payWebSiteRelation op where op.cpSiteId=site.id) paymentCount,
+        site.createUser,
+        site.modifyTime
+        from t_cp_site site left join
+        t_gm_apiprefix fix on site.id = fix.siteId left join
+        t_cp_company cpy on site.companyId = cpy.id
+        <include refid="queryWhere"/>
+    </select>
+
+    <sql id="queryWhere">
+        <where>
+            <if test="siteCode!=null and siteCode.trim() != ''">
+                AND site.siteCode like concat('%',#{siteCode},'%')
+            </if>
+            <if test="siteName!=null and siteName.trim() != ''">
+                AND site.siteName like concat('%',#{siteName},'%')
+            </if>
+            <if test="companyName!=null and companyName.trim() != ''">
+                AND cpy.companyFname like concat('%',#{companyName},'%')
+            </if>
+        </where>
+    </sql>
+
+    <update id="closeOrOpen">
+        update t_op_payWebSiteRelation set available=#{available} where id=#{relateId}
+    </update>
+
+    <delete id="deleteByIds" parameterType="java.util.List">
+        delete from t_op_payWebSiteRelation where id in
+        <foreach item="item" collection="list" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </delete>
+
+</mapper>

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+
+<mapper namespace="com.eveb.saasops.modules.merchant.mapper.TCpSiteUrlMapper">
+
+    <select id="listSiteUrl" resultType="com.eveb.saasops.modules.merchant.entity.TCpSiteUrl">
+        select site.id siteId,
+        site.siteCode,
+        site.siteName,
+        cp.companyFname companyName,
+        (select count(1) from t_cp_siteurl url where url.siteId = site.id) domainCount,
+        site.createUser,
+        site.modifyTime
+        from t_cp_site site left JOIN
+        t_cp_company cp
+        on site.companyId = cp.id
+        <include refid="queryTCpSiteUrl"/>
+        ORDER BY site.createTime DESC
+    </select>
+
+    <sql id="queryTCpSiteUrl">
+        <where>
+            <if test="siteCode!=null and siteCode.trim() != ''">
+                AND site.siteCode like concat('%',#{siteCode},'%')
+            </if>
+            <if test="siteName!=null and siteName.trim() != ''">
+                AND site.siteName like concat('%',#{siteName},'%')
+            </if>
+            <if test="companyName!=null and companyName.trim() != ''">
+                AND cp.companyFname like concat('%',#{companyName},'%')
+            </if>
+        </where>
+    </sql>
+
+
+    <select id="findDomainListPage" resultType="com.eveb.saasops.modules.merchant.entity.TCpSiteUrl">
+        select url.id,
+               site.siteCode,
+               site.siteName,
+               url.clientType,
+               url.siteUrl,
+               url.available
+        from t_cp_siteurl url,
+                      t_cp_site site
+                where url.siteId = site.id
+                  and site.id = #{siteId}
+    </select>
+
+
+    <delete id="deleteBatch">
+        delete from t_cp_siteurl where id in
+        <foreach item="item" collection="list" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </delete>
+
+    <update id="closeOrOpen">
+        update t_cp_siteurl set available=#{available} where id=#{id}
+    </update>
+
+    <insert id="addInfo" parameterType="com.eveb.saasops.modules.merchant.entity.TCpSiteUrl">
+        insert into t_cp_siteurl (
+                            siteId,
+                            siteCode,
+                            siteUrl,
+                            available,
+                            clientType
+                        ) values (
+                            #{siteId},
+                            #{siteCode},
+                            #{siteUrl},
+                            #{available},
+                            #{clientType}
+        )
+    </insert>
+</mapper>

@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+
+<mapper namespace="com.eveb.saasops.modules.operate.mapper.OperateMapper">
+
+    <select id="listTOpActtmpl" resultType="com.eveb.saasops.modules.operate.entity.TOpActtmpl">
+        select * from t_op_acttmpl
+        <include refid="queryTOpActtmpl"/>
+    </select>
+
+    <select id="listTBsBank" resultType="com.eveb.saasops.modules.operate.entity.TBsBank">
+        select t1.*,t2.nums from t_bs_bank t1 LEFT JOIN (select bankId,count(*) nums from t_op_payBankRelation GROUP BY
+        bankId)
+        t2 on t1.id = t2.bankId
+        <include refid="queryTBsBank"/>
+        ORDER BY t1.createTime desc
+    </select>
+
+    <select id="listTOpPay" resultType="com.eveb.saasops.modules.operate.entity.TOpPay">
+        select tb7.*,tb8.bankNames,tb9.siteNames from t_op_pay tb7 left join
+        (select tb1.id,group_concat(tb2.bankName separator '、') bankNames from t_op_pay tb1,t_bs_bank
+        tb2,t_op_payBankRelation tb3 where tb1.id=tb3.paymentId and tb2.id=tb3.bankId GROUP BY tb1.id) tb8 on
+        tb7.id=tb8.id
+        left join(select tb4.id,GROUP_CONCAT(tb6.siteName order by tb6.siteName separator '、') siteNames from t_op_pay
+        tb4,t_op_payWebSiteRelation tb5,t_cp_site tb6 where tb4.id=tb5.paymentId and tb5.cpSiteId=tb6.id group by
+        tb4.id)tb9 on tb7.id=tb9.id
+        <include refid="queryTOpPay"/>
+    </select>
+
+    <select id="listTOprNotice" resultType="com.eveb.saasops.modules.operate.entity.TOprNotice">
+        select
+        t1.`id`,t1.`noticeTitle`,t1.`noticeType`,t1.`noticeContent`,t1.`startTime`,t1.`endTime`,t1.`showType`,t1.`createUser`,t1.`createTime`,t1.`updateUser`,t1.`updateTime`,(case
+        t1.available when t1.startTime &lt;= NOW() and t1.endTime &gt;= NOW() THEN 1 ELSE 0 END) as available from
+        t_opr_notice t1
+        <include refid="queryTOprNotice"/>
+    </select>
+
+    <select id="getTOpPaywebsiterelation" resultType="com.eveb.saasops.modules.operate.entity.TOpPaywebsiterelation">
+        SELECT t1.siteName,t2.cpSiteId,t2.paymentId FROM t_cp_site t1 LEFT JOIN `t_op_payWebSiteRelation` t2 on t1.id =
+        t2.cpSiteId
+        <include refid="queryTOpPaywebsiterelation"/>
+    </select>
+
+    <select id="getTOpPayConfig" resultType="com.eveb.saasops.modules.operate.entity.TOpPayConfig">
+        SELECT t1.siteName,t2.cpSiteId,t2.paymentId FROM t_cp_site t1 LEFT JOIN `t_op_payWebSiteRelation` t2 on t1.id =
+        t2.cpSiteId
+        <include refid="queryTOpPaywebsiterelation"/>
+    </select>
+
+    <sql id="queryTOpActtmpl">
+        <where>
+            <if test="tmplName!=null and tmplName.trim() != ''">
+                AND tmplName like concat('%',#{tmplName},'%')
+            </if>
+            <if test="createUser!=null and createUser.trim() != ''">
+                AND createUser like concat('%',#{createUser},'%')
+            </if>
+            <if test="available!=null">
+                AND available = #{available}
+            </if>
+        </where>
+    </sql>
+
+    <sql id="queryTBsBank">
+        <where>
+            <if test="bankName!=null and bankName.trim() != ''">
+                AND bankName like concat('%',#{bankName},'%')
+            </if>
+            <if test="createUser!=null and createUser.trim() != ''">
+                AND createUser like concat('%',#{createUser},'%')
+            </if>
+            <if test="available!=null">
+                AND available = #{available}
+            </if>
+        </where>
+    </sql>
+
+    <sql id="queryTOpPay">
+        <where>
+            <if test="payType!=null">
+                AND tb7.payType = #{payType}
+            </if>
+            <if test="isEnable!=null">
+                AND tb7.isEnable = #{isEnable}
+            </if>
+            <if test="payment!=null and payment.trim() != ''">
+                AND tb7.payment like concat('%',#{payment},'%')
+            </if>
+            <if test="bankNames!=null and bankNames.trim() != ''">
+                AND tb8.bankNames like concat('%',#{bankNames},'%')
+            </if>
+            <if test="siteNames!=null and siteNames.trim() != ''">
+                AND tb9.siteNames like concat('%',#{siteNames},'%')
+            </if>
+            <if test="createUser!=null and createUser.trim() != ''">
+                AND tb7.createUser like concat('%',#{createUser},'%')
+            </if>
+        </where>
+    </sql>
+
+    <sql id="queryTOprNotice">
+        <where>
+            <if test="noticeTitle!=null and noticeTitle.trim() != ''">
+                AND noticeTitle like concat('%',#{noticeTitle},'%')
+            </if>
+            <if test="noticeType!=null">
+                AND noticeType = #{noticeType}
+            </if>
+            <if test="startTime!=null and startTime !=''">
+                AND startTime = #{startTime}
+            </if>
+            <if test="endTime!=null and endTime !=''">
+                AND endTime = #{endTime}
+            </if>
+        </where>
+    </sql>
+
+    <sql id="queryTOpPaywebsiterelation">
+        <where>
+            <if test="paymentId!=null and paymentId !=''">
+                AND t2.paymentId = #{paymentId}
+            </if>
+        </where>
+    </sql>
+</mapper>
